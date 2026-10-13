@@ -17,7 +17,7 @@ schemas = ["lakehouse.bronze", "lakehouse.silver", "lakehouse.gold"]
 [gcp]
 enabled = true
 project = "praponb-lakehouse"
-regions = ["asia-southeast1"]
+regions = ["asia-southeast1", "asia-southeast3"]
 
 [thresholds]
 # Compute (spec §4 Module A, §7)
