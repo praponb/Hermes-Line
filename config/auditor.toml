@@ -1,0 +1,50 @@
+# Lakehouse FinOps & Table Hygiene Auditor configuration.
+# Credentials are NOT stored here: Databricks uses ~/.databrickscfg profiles, GCP uses gcloud ADC.
+
+environment_name = "Production-Lakehouse"
+timezone = "Asia/Bangkok"
+db_path = "~/.hermes/audit/lakehouse_finops.db"
+# Hard stop for the whole run (spec §6: 15 minutes).
+timeout_sec = 900
+
+[[databricks]]
+profile = "lakehouse-audit"
+# SQL warehouse used for DESCRIBE DETAIL / DESCRIBE HISTORY (Serverless Starter Warehouse, auto-stop 5 min).
+warehouse_id = "b8da7ee15120a028"
+# catalog.schema targets for the storage hygiene audit.
+schemas = ["lakehouse.bronze", "lakehouse.silver", "lakehouse.gold"]
+
+[gcp]
+enabled = true
+project = "praponb-lakehouse"
+regions = ["asia-southeast1"]
+
+[thresholds]
+# Compute (spec §4 Module A, §7)
+idle_flag_hours = 2.0
+idle_alert_hours = 4.0
+oversized_driver_cores = 16
+business_hours_start = 8    # local time, inclusive
+business_hours_end = 19     # local time, exclusive
+off_hours_flag_hours = 1.0  # min off-hours runtime in the last 24h to flag
+# Storage (spec §4 Module B flags, §7 alerts)
+optimize_avg_file_mb = 128.0
+optimize_file_count = 1000
+optimize_min_files = 50     # tables with fewer files cannot meaningfully be compacted
+alert_avg_file_mb = 32.0
+alert_file_count = 2000
+vacuum_retention_days = 7   # used when the table has no delta.deletedFileRetentionDuration
+# Cost (spec §6, §7)
+baseline_days = 7
+runaway_ratio = 1.5
+daily_waste_alert_usd = 100.0
+
+[rates]
+# Estimated all-in USD per node-hour (DBU + VM). Placeholder values: tune to your contract pricing.
+default_node_hourly_usd = 1.00
+
+[rates.node_types]
+"n2-standard-4" = 0.75
+"n2-highmem-4" = 0.90
+"n2-standard-16" = 3.00
+"n2-highmem-16" = 3.60
