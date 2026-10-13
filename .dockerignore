@@ -1,0 +1,8 @@
+.git
+.venv
+.pytest_cache
+**/__pycache__
+*.db
+spec.docx
+deploy/.env
+deploy/secrets

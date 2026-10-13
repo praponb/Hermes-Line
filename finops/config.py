@@ -77,7 +77,10 @@ def load(path: Path | str = DEFAULT_CONFIG) -> Config:
     return Config(
         environment_name=raw.get("environment_name", "Lakehouse"),
         timezone=raw.get("timezone", "Asia/Bangkok"),
-        db_path=Path(raw.get("db_path", "~/.hermes/audit/lakehouse_finops.db")).expanduser(),
+        # FINOPS_DB_PATH wins so the Docker deploy can point at /opt/data without a second config.
+        db_path=Path(
+            os.environ.get("FINOPS_DB_PATH") or raw.get("db_path", "~/.hermes/audit/lakehouse_finops.db")
+        ).expanduser(),
         timeout_sec=int(raw.get("timeout_sec", 900)),
         databricks=tuple(
             DatabricksTarget(

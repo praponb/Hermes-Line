@@ -179,6 +179,66 @@ sqlite3 -header -column "$DB" \
 
 Timestamps in `audit_runs` are UTC.
 
+## Deploy with Docker (Ubuntu server)
+
+Hermes and the auditor run together in one container on `192.168.1.49`
+(user `prapon`). `deploy/docker-compose.yml` starts:
+
+- `gateway`: Hermes (cron + LINE) with the auditor at `/opt/hermes-line`
+- `dashboard`: Hermes dashboard on `127.0.0.1:9119` only
+- `tunnel`: tunnel `hermes-line`, `hermes-line.praponb.com` → `localhost:8646`
+
+Hermes data lives in `/home/prapon/.hermes` (mounted at `/opt/data`).
+Secrets go in `deploy/secrets/` and `deploy/.env`, both git-ignored:
+
+| File | Contents |
+| --- | --- |
+| `deploy/.env` | copy of `.env.example` with the tunnel token |
+| `deploy/secrets/databrickscfg` | `[lakehouse-audit]` service principal |
+
+### First install
+
+```bash
+# Base image: Hermes at the commit the Mac runs
+git clone https://github.com/NousResearch/hermes-agent.git ~/src/hermes-agent
+git -C ~/src/hermes-agent checkout f7b26ef
+docker build -t hermes-agent:f7b26ef ~/src/hermes-agent
+
+# This repo (read-only deploy key)
+git clone -b b_pbv_main git@github.com:praponb/Hermes-Line.git ~/Hermes-Line
+cd ~/Hermes-Line/deploy
+cp .env.example .env            # then add CLOUDFLARE_TUNNEL_TOKEN
+chmod 600 .env secrets/*
+docker compose build
+
+# Restore Hermes data from a Mac backup (hermes backup -o ...)
+mkdir -p ~/.hermes && cp ~/hermes-backup-migrate.zip ~/.hermes/
+docker compose run --rm gateway import -f /opt/data/hermes-backup-migrate.zip
+
+docker compose up -d
+# Regenerate the cron wrapper with container paths
+docker compose exec -u 1000:1000 gateway \
+  /opt/hermes-line/scripts/install_hermes.sh
+```
+
+### Operate
+
+```bash
+cd ~/Hermes-Line/deploy
+docker compose ps
+docker compose logs -f gateway
+docker compose exec -u 1000:1000 gateway hermes cron list
+docker compose exec -u 1000:1000 gateway \
+  /opt/hermes-line/scripts/run_audit.sh --dry-run
+```
+
+### Update
+
+```bash
+cd ~/Hermes-Line && git pull
+cd deploy && docker compose build && docker compose up -d
+```
+
 ## Project layout
 
 ```text
@@ -195,6 +255,7 @@ scripts/audit_compute.sh   Module A collector
 scripts/audit_storage.sh   Module B collector
 scripts/lib.sh             shared shell helpers (timeouts, SQL statement API)
 scripts/install_hermes.sh  installs the Hermes wrapper script
+deploy/                    Dockerfile + compose for the Ubuntu server
 tests/                     pytest suite
 spec.docx                  original specification
 ```
