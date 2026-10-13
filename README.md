@@ -18,6 +18,20 @@ Hermes delivers stdout to LINE verbatim; a non-zero exit becomes a
 failure alert.
 ```
 
+## Where it runs
+
+Since 2026-10-13, production runs in Docker on the Ubuntu server
+`192.168.1.49` (`ssh prapon@192.168.1.49`, stack in `~/Hermes-Line/deploy`).
+See [Deploy with Docker](#deploy-with-docker-ubuntu-server).
+
+- Schedule: weekdays 08:00 Bangkok time, job `27f143f1b1ae`, report pushed
+  to LINE.
+- LINE chat: the channel's webhook stays with the OpenClaw demo (both bots
+  share one channel), so Hermes only pushes reports. The `hermes-line`
+  tunnel is ready if Hermes gets its own channel.
+- The MacBook is retired: its Hermes gateway is uninstalled and the job is
+  paused there. Use it only for development (tests, dry runs).
+
 ## What it checks
 
 ### Compute (Module A)
@@ -66,6 +80,10 @@ project/regions, thresholds and cost rates. Set
 `FINOPS_CONFIG=/path/to/other.toml` to use a different file.
 
 ## Commands
+
+The commands below work in a local checkout (development). For production,
+run them on the server inside the container, as shown in
+[Operate](#operate).
 
 ### Setup
 
@@ -141,7 +159,9 @@ cat "$RUN_DIR/errors.jsonl"
 
 ### Hermes schedule
 
-The job is `lakehouse-finops-auditor`, id `27f143f1b1ae`.
+The job is `lakehouse-finops-auditor`, id `27f143f1b1ae`. On the server,
+prefix each `hermes` command with `docker compose exec gateway` (from
+`~/Hermes-Line/deploy`).
 
 ```bash
 hermes cron list                          # show jobs and next run
@@ -154,7 +174,8 @@ hermes cron doctor                        # health check for scheduled jobs
 ls ~/.hermes/cron/output/27f143f1b1ae/    # saved reports from past runs
 ```
 
-`hermes cron run` starts the job on the next scheduler tick.
+`hermes cron run` starts the job on the next scheduler tick. Delivery is
+logged in `~/.hermes/logs/` as `delivered to line:…`.
 
 The job was created as a no-agent script job, roughly:
 
@@ -177,7 +198,15 @@ sqlite3 -header -column "$DB" \
    FROM storage_hygiene_flags ORDER BY id DESC LIMIT 20;"
 ```
 
-Timestamps in `audit_runs` are UTC.
+Timestamps in `audit_runs` are UTC. The server has no `sqlite3`; use the
+container's Python instead:
+
+```bash
+docker compose exec gateway python3 -c "import sqlite3
+c = sqlite3.connect('/opt/data/audit/lakehouse_finops.db')
+q = 'SELECT * FROM audit_runs ORDER BY timestamp DESC LIMIT 10'
+for row in c.execute(q): print(row)"
+```
 
 ## Deploy with Docker (Ubuntu server)
 
@@ -195,17 +224,35 @@ Secrets go in `deploy/secrets/` and `deploy/.env`, both git-ignored:
 | --- | --- |
 | `deploy/.env` | copy of `.env.example` with the tunnel token |
 | `deploy/secrets/databrickscfg` | `[lakehouse-audit]` service principal |
+| `deploy/secrets/gcp-sa.json` | key of `hermes-finops-auditor@…` |
+
+Credentials used by the server (all read-only):
+
+- Databricks service principal `hermes-finops-auditor`: CAN_USE on warehouse
+  `b8da7ee15120a028`; USE CATALOG `lakehouse`; USE SCHEMA and SELECT on
+  `lakehouse.bronze/silver/gold`.
+- GCP service account
+  `hermes-finops-auditor@praponb-lakehouse.iam.gserviceaccount.com` with
+  `roles/dataproc.viewer`.
+- The LINE channel token comes from the Hermes `.env` in
+  `/home/prapon/.hermes`.
+
+Hermes runs the agent's commands inside the container
+(`terminal.backend: local`), so no Docker socket is mounted. The LINE webhook
+listens on `127.0.0.1:8646` only (`LINE_HOST=127.0.0.1` in the Hermes `.env`);
+just the tunnel reaches it. Each container's log is capped at 3 × 10 MB.
 
 ### First install
 
 ```bash
-# Base image: Hermes at the commit the Mac runs
+# Base image: Hermes at commit f7b26ef (the version migrated from the Mac)
 git clone https://github.com/NousResearch/hermes-agent.git ~/src/hermes-agent
 git -C ~/src/hermes-agent checkout f7b26ef
 docker build -t hermes-agent:f7b26ef ~/src/hermes-agent
 
-# This repo (read-only deploy key)
-git clone -b b_pbv_main git@github.com:praponb/Hermes-Line.git ~/Hermes-Line
+# This repo (read-only deploy key, ssh alias github-hermes-line)
+git clone -b b_pbv_main git@github-hermes-line:praponb/Hermes-Line.git \
+  ~/Hermes-Line
 cd ~/Hermes-Line/deploy
 cp .env.example .env            # then add CLOUDFLARE_TUNNEL_TOKEN
 chmod 600 .env secrets/*
@@ -216,6 +263,11 @@ mkdir -p ~/.hermes && cp ~/hermes-backup-migrate.zip ~/.hermes/
 docker compose run --rm gateway import -f /opt/data/hermes-backup-migrate.zip
 
 docker compose up -d
+# One-time gcloud login as the service account (stored in CLOUDSDK_CONFIG)
+docker compose exec -u 1000:1000 gateway gcloud auth \
+  activate-service-account --key-file=/run/hermes-line-secrets/gcp-sa.json
+docker compose exec -u 1000:1000 gateway \
+  gcloud config set project praponb-lakehouse
 # Regenerate the cron wrapper with container paths
 docker compose exec -u 1000:1000 gateway \
   /opt/hermes-line/scripts/install_hermes.sh
@@ -232,12 +284,61 @@ docker compose exec -u 1000:1000 gateway \
   /opt/hermes-line/scripts/run_audit.sh --dry-run
 ```
 
+### Backups
+
+`deploy/backup.sh` runs `hermes backup` daily at 03:00 (host crontab) and
+keeps the newest 7 zips in `/home/prapon/hermes-backups`. Restore one with
+`hermes import` (see First install). The zips contain the Hermes `.env`,
+logins and the gcloud service-account login, so keep the folder private.
+
+```bash
+crontab -l                                  # shows the backup.sh line
+~/Hermes-Line/deploy/backup.sh              # run one now
+tail ~/hermes-backups/backup.log
+```
+
 ### Update
 
 ```bash
 cd ~/Hermes-Line && git pull
 cd deploy && docker compose build && docker compose up -d
 ```
+
+The server checkout tracks `main`.
+
+### Upgrade Hermes
+
+The base image is pinned with `HERMES_IMAGE` in `deploy/.env`. To move to a
+newer Hermes commit:
+
+```bash
+cd ~/src/hermes-agent && git fetch && git checkout <commit>
+docker build -t hermes-agent:<commit> .
+# Back up first, then point deploy/.env at the new image
+~/Hermes-Line/deploy/backup.sh
+sed -i 's/^HERMES_IMAGE=.*/HERMES_IMAGE=hermes-agent:<commit>/' \
+  ~/Hermes-Line/deploy/.env
+cd ~/Hermes-Line/deploy && docker compose build && docker compose up -d
+docker compose exec gateway hermes cron list   # job still active?
+```
+
+To undo, set `HERMES_IMAGE` back to the previous tag and repeat the last
+line. The base build takes 15–45 minutes.
+
+### Roll back to the Mac
+
+Only one Hermes gateway may run for the LINE channel at a time.
+
+```bash
+# On the server
+cd ~/Hermes-Line/deploy && docker compose down
+# On the Mac
+hermes gateway install
+hermes cron resume 27f143f1b1ae
+```
+
+The Mac keeps its `~/.hermes` and `~/hermes-backup-migrate-20261013.zip`
+from the cutover.
 
 ## Project layout
 
