@@ -1,0 +1,54 @@
+# Hermes gateway + FinOps auditor on the Ubuntu server.
+# Usage (from deploy/): cp .env.example .env, fill it in, then docker compose up -d
+# Mirrors upstream hermes-agent/docker-compose.yml; keep the image's /init entrypoint.
+name: hermes
+
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        HERMES_IMAGE: ${HERMES_IMAGE:-hermes-agent:f7b26ef}
+    image: hermes-line:latest
+    container_name: hermes
+    restart: unless-stopped
+    network_mode: host  # LINE webhook on localhost:8646, reached through the tunnel
+    volumes:
+      - ${HERMES_DATA:-/home/prapon/.hermes}:/opt/data
+      # Kept outside /opt/data so `hermes backup` never picks them up.
+      - ./secrets:/run/hermes-line-secrets:ro
+    environment:
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+      - TZ=Asia/Bangkok  # cron schedules are local time; the container default is UTC
+      - FINOPS_DB_PATH=/opt/data/audit/lakehouse_finops.db
+      - DATABRICKS_CONFIG_FILE=/run/hermes-line-secrets/databrickscfg
+    command: ["gateway", "run"]
+
+  dashboard:
+    image: hermes-line:latest
+    container_name: hermes-dashboard
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      - gateway
+    volumes:
+      - ${HERMES_DATA:-/home/prapon/.hermes}:/opt/data
+    environment:
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+      - TZ=Asia/Bangkok
+    # Localhost-only. From the Mac: ssh -L 9119:localhost:9119 prapon@192.168.1.49
+    command: ["dashboard", "--host", "127.0.0.1", "--no-open"]
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.0
+    container_name: hermes-tunnel
+    restart: unless-stopped
+    network_mode: host
+    # Remotely managed tunnel: route hermes-line.praponb.com -> http://localhost:8646
+    # in the Cloudflare dashboard.
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in deploy/.env}
