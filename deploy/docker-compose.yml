@@ -24,6 +24,8 @@ services:
       - TZ=Asia/Bangkok  # cron schedules are local time; the container default is UTC
       - FINOPS_DB_PATH=/opt/data/audit/lakehouse_finops.db
       - DATABRICKS_CONFIG_FILE=/run/hermes-line-secrets/databrickscfg
+      # gcloud service-account login (activated once from secrets/gcp-sa.json), kept on the volume
+      - CLOUDSDK_CONFIG=/opt/data/.config/gcloud
     command: ["gateway", "run"]
 
   dashboard:

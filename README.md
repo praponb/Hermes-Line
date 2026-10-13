@@ -195,6 +195,7 @@ Secrets go in `deploy/secrets/` and `deploy/.env`, both git-ignored:
 | --- | --- |
 | `deploy/.env` | copy of `.env.example` with the tunnel token |
 | `deploy/secrets/databrickscfg` | `[lakehouse-audit]` service principal |
+| `deploy/secrets/gcp-sa.json` | key of `hermes-finops-auditor@…` |
 
 ### First install
 
@@ -204,8 +205,9 @@ git clone https://github.com/NousResearch/hermes-agent.git ~/src/hermes-agent
 git -C ~/src/hermes-agent checkout f7b26ef
 docker build -t hermes-agent:f7b26ef ~/src/hermes-agent
 
-# This repo (read-only deploy key)
-git clone -b b_pbv_main git@github.com:praponb/Hermes-Line.git ~/Hermes-Line
+# This repo (read-only deploy key, ssh alias github-hermes-line)
+git clone -b b_pbv_main git@github-hermes-line:praponb/Hermes-Line.git \
+  ~/Hermes-Line
 cd ~/Hermes-Line/deploy
 cp .env.example .env            # then add CLOUDFLARE_TUNNEL_TOKEN
 chmod 600 .env secrets/*
@@ -216,6 +218,11 @@ mkdir -p ~/.hermes && cp ~/hermes-backup-migrate.zip ~/.hermes/
 docker compose run --rm gateway import -f /opt/data/hermes-backup-migrate.zip
 
 docker compose up -d
+# One-time gcloud login as the service account (stored in CLOUDSDK_CONFIG)
+docker compose exec -u 1000:1000 gateway gcloud auth \
+  activate-service-account --key-file=/run/hermes-line-secrets/gcp-sa.json
+docker compose exec -u 1000:1000 gateway \
+  gcloud config set project praponb-lakehouse
 # Regenerate the cron wrapper with container paths
 docker compose exec -u 1000:1000 gateway \
   /opt/hermes-line/scripts/install_hermes.sh
