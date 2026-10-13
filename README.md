@@ -186,7 +186,7 @@ Hermes and the auditor run together in one container on `192.168.1.49`
 
 - `gateway`: Hermes (cron + LINE) with the auditor at `/opt/hermes-line`
 - `dashboard`: Hermes dashboard on `127.0.0.1:9119` only
-- `tunnel`: Cloudflare tunnel, `hermes-line.praponb.com` → `localhost:8646`
+- `tunnel`: tunnel `hermes-line`, `hermes-line.praponb.com` → `localhost:8646`
 
 Hermes data lives in `/home/prapon/.hermes` (mounted at `/opt/data`).
 Secrets go in `deploy/secrets/` and `deploy/.env`, both git-ignored:

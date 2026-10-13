@@ -47,8 +47,9 @@ services:
     container_name: hermes-tunnel
     restart: unless-stopped
     network_mode: host
-    # Remotely managed tunnel: route hermes-line.praponb.com -> http://localhost:8646
-    # in the Cloudflare dashboard.
+    # Tunnel "hermes-line" (CNAME hermes-line.praponb.com); every request goes to the
+    # LINE webhook port.
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in deploy/.env}
+      - TUNNEL_URL=http://localhost:8646

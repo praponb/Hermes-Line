@@ -16,7 +16,7 @@ def cfg():
 
 @pytest.fixture
 def now():
-    # Tue 14 Oct 2026 08:00 Bangkok time
+    # Wed 14 Oct 2026 08:00 Bangkok time
     return datetime(2026, 10, 14, 1, 0, tzinfo=timezone.utc)
 
 
