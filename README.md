@@ -238,7 +238,9 @@ Credentials used by the server (all read-only):
   `/home/prapon/.hermes`.
 
 Hermes runs the agent's commands inside the container
-(`terminal.backend: local`), so no Docker socket is mounted.
+(`terminal.backend: local`), so no Docker socket is mounted. The LINE webhook
+listens on `127.0.0.1:8646` only (`LINE_HOST=127.0.0.1` in the Hermes `.env`);
+just the tunnel reaches it. Each container's log is capped at 3 × 10 MB.
 
 ### First install
 
@@ -282,6 +284,19 @@ docker compose exec -u 1000:1000 gateway \
   /opt/hermes-line/scripts/run_audit.sh --dry-run
 ```
 
+### Backups
+
+`deploy/backup.sh` runs `hermes backup` daily at 03:00 (host crontab) and
+keeps the newest 7 zips in `/home/prapon/hermes-backups`. Restore one with
+`hermes import` (see First install). The zips contain the Hermes `.env`,
+logins and the gcloud service-account login, so keep the folder private.
+
+```bash
+crontab -l                                  # shows the backup.sh line
+~/Hermes-Line/deploy/backup.sh              # run one now
+tail ~/hermes-backups/backup.log
+```
+
 ### Update
 
 ```bash
@@ -289,7 +304,26 @@ cd ~/Hermes-Line && git pull
 cd deploy && docker compose build && docker compose up -d
 ```
 
-The server checkout tracks `b_pbv_main`.
+The server checkout tracks `main`.
+
+### Upgrade Hermes
+
+The base image is pinned with `HERMES_IMAGE` in `deploy/.env`. To move to a
+newer Hermes commit:
+
+```bash
+cd ~/src/hermes-agent && git fetch && git checkout <commit>
+docker build -t hermes-agent:<commit> .
+# Back up first, then point deploy/.env at the new image
+~/Hermes-Line/deploy/backup.sh
+sed -i 's/^HERMES_IMAGE=.*/HERMES_IMAGE=hermes-agent:<commit>/' \
+  ~/Hermes-Line/deploy/.env
+cd ~/Hermes-Line/deploy && docker compose build && docker compose up -d
+docker compose exec gateway hermes cron list   # job still active?
+```
+
+To undo, set `HERMES_IMAGE` back to the previous tag and repeat the last
+line. The base build takes 15–45 minutes.
 
 ### Roll back to the Mac
 
