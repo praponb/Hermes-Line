@@ -32,6 +32,8 @@ See [Deploy with Docker](#deploy-with-docker-ubuntu-server).
 - The MacBook is retired: its Hermes gateway is uninstalled and the job is
   paused there. Use it only for development (tests, dry runs).
 
+Open follow-ups are tracked in [PENDING.md](PENDING.md).
+
 ## URLs
 
 | What | URL | Notes |
