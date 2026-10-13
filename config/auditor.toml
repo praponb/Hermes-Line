@@ -40,11 +40,17 @@ runaway_ratio = 1.5
 daily_waste_alert_usd = 100.0
 
 [rates]
-# Estimated all-in USD per node-hour (DBU + VM). Placeholder values: tune to your contract pricing.
+# Estimated all-in USD per node-hour (DBU + VM), list prices as of 2026-10-13:
+#   Databricks on GCP, Premium tier, All-Purpose Compute at $0.55/DBU
+#     (databricks.com/product/pricing/product-pricing/instance-types)
+#   + Compute Engine on-demand VM price in asia-southeast1
+#     (cloud.google.com/products/compute/pricing/general-purpose)
+# Excludes disks, network and any negotiated discounts.
+# Fallback for node types not listed below.
 default_node_hourly_usd = 1.00
 
 [rates.node_types]
-"n2-standard-4" = 0.75
-"n2-highmem-4" = 0.90
-"n2-standard-16" = 3.00
-"n2-highmem-16" = 3.60
+"n2-standard-4" = 0.64   # 0.72 DBU/h ($0.396) + VM $0.2396
+"n2-highmem-4" = 0.85    # 0.96 DBU/h ($0.528) + VM $0.3232
+"n2-standard-16" = 2.54  # 2.88 DBU/h ($1.584) + VM $0.9584
+"n2-highmem-16" = 3.40   # 3.84 DBU/h ($2.112) + VM $1.2929

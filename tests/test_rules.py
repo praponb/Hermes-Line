@@ -76,14 +76,15 @@ def test_off_hours_overlap(cfg, now):
     assert rules.off_hours_overlap(start, now, cfg) == 13.0
     f = rules.evaluate_compute(dbx(now, last_restarted_time=ms(start), last_activity_time=ms(now)), now, cfg)
     assert f.violations == [rules.OFF_HOURS]
-    # waste = hourly (0.90 driver + 2 x 0.90 workers) x 13 off-hours
-    assert f.hourly_rate_usd == 2.7
-    assert f.est_daily_waste_usd == round(2.7 * 13, 2)
+    # waste = hourly (driver + 2 workers, all n2-highmem-4) x 13 off-hours
+    hourly = round(3 * cfg.rates.node_hourly("n2-highmem-4"), 4)
+    assert f.hourly_rate_usd == hourly
+    assert f.est_daily_waste_usd == round(hourly * 13, 2)
 
 
 def test_waste_capped_at_24h(cfg, now):
     f = rules.evaluate_compute(dbx(now, last_restarted_time=ms(now - timedelta(days=3))), now, cfg)
-    assert f.est_daily_waste_usd == round(2.7 * 24, 2)
+    assert f.est_daily_waste_usd == round(3 * cfg.rates.node_hourly("n2-highmem-4") * 24, 2)
 
 
 def test_dataproc_rules(cfg, now):
