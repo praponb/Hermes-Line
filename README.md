@@ -32,6 +32,27 @@ See [Deploy with Docker](#deploy-with-docker-ubuntu-server).
 - The MacBook is retired: its Hermes gateway is uninstalled and the job is
   paused there. Use it only for development (tests, dry runs).
 
+## URLs
+
+| What | URL | Notes |
+| --- | --- | --- |
+| Hermes dashboard | <http://localhost:9119> | Through an SSH tunnel |
+| Code on GitHub | <https://github.com/praponb/Hermes-Line> | Private |
+| Databricks | <https://8259562386951628.8.gcp.databricks.com> | Workspace |
+| LINE webhook | `https://hermes-line.praponb.com/line/webhook` | LINE only |
+| LINE console | <https://developers.line.biz/console/> | Webhook settings |
+
+- **Hermes dashboard:** it listens on the server only (`127.0.0.1:9119`)
+  because it stores API keys. Open the tunnel first and keep it open:
+  `ssh -L 9119:localhost:9119 prapon@192.168.1.49`.
+- **Code:** production runs from `main`; work happens on `b_pbv_main`.
+- **LINE webhook:** only LINE's servers call it. It's unused while the
+  channel's webhook stays with the OpenClaw demo; a browser gets
+  `405 Method Not Allowed`.
+- **Reports:** there is no web page for them. They arrive in the LINE chat,
+  and past reports are saved on the server in
+  `~/.hermes/cron/output/27f143f1b1ae/`.
+
 ## What it checks
 
 ### Compute (Module A)
