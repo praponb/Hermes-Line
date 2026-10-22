@@ -92,5 +92,5 @@ def test_cli_run_fails_when_nothing_collected(tmp_path, capsys):
 def test_targets_tsv(capsys):
     assert main(["targets"]) == 0
     lines = capsys.readouterr().out.splitlines()
-    assert lines[0] == "databricks\tlakehouse-audit\tb8da7ee15120a028\tlakehouse.bronze lakehouse.silver lakehouse.gold"
-    assert lines[1] == "dataproc\tpraponb-lakehouse\tasia-southeast1"
+    assert lines[0] == "databricks\tlakehouse-audit\t1525087559b13da2\tlakehouse.bronze lakehouse.silver lakehouse.gold"
+    assert lines[1] == "dataproc\tmoukda-lakehouse\tasia-southeast1"

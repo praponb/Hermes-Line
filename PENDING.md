@@ -2,22 +2,9 @@
 
 Last updated: 2026-10-22. Times are Bangkok time.
 
-## Urgent
-
-- **0. The daily audit has failed since Mon 2026-10-19.** The last good run
-  was Fri 2026-10-16 08:01; every weekday run since exits with code 2:
-  - Databricks: `default auth: cannot configure default credentials` (the
-    `lakehouse-audit` profile from `deploy/secrets/databrickscfg` is not
-    being picked up).
-  - GCP: `PERMISSION_DENIED` on project `praponb-lakehouse` for
-    `hermes-finops-auditor@…` (check its `roles/dataproc.viewer` grant).
-
-  Details: `docker compose exec gateway hermes cron runs 27f143f1b1ae`.
-  The dashboard at https://finops.praponb.com warns while data is stale.
-
 ## Scheduled checks
 
-- **2. Mac clean-up**, once the audit runs cleanly again:
+- **2. Mac clean-up**, once the audit has run cleanly on the new lakehouse:
   - Delete `~/hermes-backup-migrate-20261013.zip`. It contains secrets,
     including the live LINE token.
   - Optionally remove the Mac's `~/.hermes` and its Hermes sandbox images
@@ -43,6 +30,15 @@ Last updated: 2026-10-22. Times are Bangkok time.
   shared channel's webhook goes to the OpenClaw demo.
 
 ## Done on 2026-10-22
+
+- Audit failures since 2026-10-19 explained: GCP project
+  `praponb-lakehouse` and its Databricks workspace were deleted (the project
+  is purged by Google about 30 days later). The auditor now targets
+  workspace `8259554454724321.1.gcp.databricks.com` and project
+  `moukda-lakehouse`, with new read-only credentials created by
+  moukda77770919@gmail.com: service principal `hermes-finops-auditor`
+  (OAuth secret expires 2028-10-21) and service account
+  `hermes-finops-auditor@moukda-lakehouse`.
 
 - First server backup and reports checked: backups run daily at 03:00
   (7 kept); reports ran on 14–16 Oct.

@@ -9,14 +9,14 @@ timeout_sec = 900
 
 [[databricks]]
 profile = "lakehouse-audit"
-# SQL warehouse used for DESCRIBE DETAIL / DESCRIBE HISTORY (Serverless Starter Warehouse, auto-stop 5 min).
-warehouse_id = "b8da7ee15120a028"
+# SQL warehouse used for DESCRIBE DETAIL / DESCRIBE HISTORY (Serverless Starter Warehouse, auto-stop 10 min).
+warehouse_id = "1525087559b13da2"
 # catalog.schema targets for the storage hygiene audit.
 schemas = ["lakehouse.bronze", "lakehouse.silver", "lakehouse.gold"]
 
 [gcp]
 enabled = true
-project = "praponb-lakehouse"
+project = "moukda-lakehouse"
 regions = ["asia-southeast1", "asia-southeast3"]
 
 [thresholds]
