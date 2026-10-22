@@ -18,6 +18,7 @@ Last updated: 2026-10-22. Times are Bangkok time.
 - **3. Off-server backups.** Daily backups stay on the server in
   `~/hermes-backups`. A copy elsewhere (NAS, cloud storage) needs a
   destination.
+
 ## Possible later
 
 - **6. Chat with Hermes on LINE.** Needs its own LINE channel; today the
