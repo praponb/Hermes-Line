@@ -13,6 +13,18 @@ Last updated: 2026-10-22. Times are Bangkok time.
 
   After this, rolling back to the Mac is no longer possible.
 
+## Temporary
+
+- **7. Demo dashboard on finops.praponb.com.** Since 2026-10-22 the URL shows
+  made-up data (environment `Demo-Lakehouse`, 16 runs from 1 to 22 Oct) from
+  the container `hermes-finops-demo` on `127.0.0.1:8651`. It was started with
+  `docker run`, not compose, and reads `~/hermes-demo/demo.db`, which
+  `~/hermes-demo/make_demo.py` rebuilds. The real dashboard (`finops-web`)
+  still runs on `127.0.0.1:8650`, and the audit and LINE reports are
+  unaffected. To switch back: set the service in `deploy/finops-tunnel.yml`
+  to `http://127.0.0.1:8650`, deploy, `docker compose restart finops-tunnel`,
+  then `docker rm -f hermes-finops-demo && rm -rf ~/hermes-demo`.
+
 ## Optional
 
 - **3. Off-server backups.** Daily backups stay on the server in
