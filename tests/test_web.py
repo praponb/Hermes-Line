@@ -36,8 +36,19 @@ def test_page_escapes_and_flags_alert(cfg, now, tmp_path):
     text = web.page(cfg, path, "prapon@gmail.com", now)
     assert "<script>x</script>" not in text and "&lt;script&gt;" in text
     assert 'class="tile alert"' in text and 'class="bar alert"' in text
-    assert "signed in as prapon@gmail.com" in text
+    assert "signed in as <!--email_off-->prapon@gmail.com<!--/email_off-->" in text
     assert "Wed 14 Oct 07:00" in text  # latest run shown in Bangkok time
+    assert "No successful audit" not in text
+    assert "No successful audit for 5 days" in web.page(cfg, path, None, now + timedelta(days=5))
+
+
+def test_zero_waste_baseline_and_ticks(cfg, now, tmp_path):
+    conn = db.connect(tmp_path / "a.db")
+    for i in range(3):
+        db.save_run(conn, run(f"r{i}", now - timedelta(days=i), 0.0), [], [])
+    conn.close()
+    text = web.page(cfg, tmp_path / "a.db", None, now)
+    assert "7-day avg $0.00" in text and "$0.50</text>" in text
 
 
 def test_page_without_db_or_runs(cfg, now, tmp_path):
