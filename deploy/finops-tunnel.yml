@@ -4,7 +4,9 @@
 # cloudflared also drops any request that lacks a valid Access token for that app.
 ingress:
   - hostname: finops.praponb.com
-    service: http://127.0.0.1:8650
+    # Temporarily the demo dashboard (container hermes-finops-demo, made-up data in ~/hermes-demo).
+    # The real dashboard (finops-web) is on 8650; switch back to it when the demo is removed.
+    service: http://127.0.0.1:8651
     originRequest:
       access:
         required: true

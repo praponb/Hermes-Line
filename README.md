@@ -47,7 +47,9 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
 - **FinOps dashboard:** charts and tables from the audit history (last 30
   days, Bangkok time). Cloudflare Access app `finops` (policy "Owner only")
   lets only prapon@gmail.com in, with a one-time code or another login
-  method set up in Zero Trust.
+  method set up in Zero Trust. **Since 2026-10-22 it temporarily shows the
+  demo dashboard** (made-up data, environment `Demo-Lakehouse`); see
+  [PENDING.md](PENDING.md) item 7.
 - **Hermes dashboard:** it listens on the server only (`127.0.0.1:9119`)
   because it stores API keys. Open the tunnel first and keep it open:
   `ssh -L 9119:localhost:9119 prapon@192.168.1.49`.
@@ -244,7 +246,8 @@ Hermes and the auditor run together in one container on `192.168.1.49`
 - `finops-web`: FinOps dashboard on `127.0.0.1:8650`, with only
   `~/.hermes/audit` mounted, read-only
 - `finops-tunnel`: tunnel `hermes-finops`, `finops.praponb.com` →
-  `localhost:8650` (`deploy/finops-tunnel.yml`). Cloudflare Access app
+  `localhost:8650` (`deploy/finops-tunnel.yml`; temporarily `localhost:8651`,
+  the demo dashboard, see [PENDING.md](PENDING.md) item 7). Cloudflare Access app
   `finops` allows only prapon@gmail.com, and cloudflared rejects requests
   without a valid Access token for that app.
 
