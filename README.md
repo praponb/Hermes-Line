@@ -335,11 +335,11 @@ Since 2026-10-22, `finops.praponb.com` shows a demo dashboard with made-up
 data (environment `Demo-Lakehouse`, weekday 08:00 runs from 1 Oct). It is
 separate from production:
 
-- `~/hermes-demo/make_demo.py` (on the server, not in this repo) writes the
-  JSON files the collectors would produce for each run and feeds them through
-  the real rules, trend and DB code into `~/hermes-demo/demo.db`.
-  `~/hermes-demo/demo.toml` is `config/auditor.toml` with the demo
-  environment name.
+- `demo/make_demo.py OUT` writes the JSON files the collectors would produce
+  for each run (`OUT/runs/`) and feeds them through the real rules, trend and
+  DB code into `OUT/demo.db`. It also writes `OUT/demo.toml`:
+  `config/auditor.toml` with the demo environment name. On the server, OUT is
+  `~/hermes-demo`; locally it defaults to `demo/out` (git-ignored).
 - Container `hermes-finops-demo` (started with `docker run`, not compose)
   serves it read-only on `127.0.0.1:8651`.
 - The audit, its history DB, the LINE reports and `finops-web` on 8650 are
@@ -347,11 +347,13 @@ separate from production:
 
 ```bash
 # Rebuild the demo data up to today (the page warns once the latest run is
-# more than 4 days old, from 26 Oct with the current data)
-docker run --rm --user 1000:1000 -e TZ=Asia/Bangkok \
-  -e PYTHONPATH=/opt/hermes-line -w /opt/hermes-line \
+# more than 4 days old, from 26 Oct with the current data). Uses the
+# script in the image, so run docker compose build after pulling changes.
+docker run --rm --user 1000:1000 -e TZ=Asia/Bangkok -w /opt/hermes-line \
   -v ~/hermes-demo:/demo --entrypoint python3 hermes-line:latest \
-  /demo/make_demo.py
+  demo/make_demo.py /demo
+# Locally (development)
+uv run python demo/make_demo.py
 # (Re)start the demo dashboard
 docker run -d --name hermes-finops-demo --restart unless-stopped \
   --network host --user 1000:1000 -e TZ=Asia/Bangkok -w /opt/hermes-line \
@@ -432,6 +434,7 @@ finops/trends.py           rolling-baseline waste comparison
 finops/report.py           LINE-sized report rendering
 finops/web.py              read-only web dashboard (finops-web, demo dashboard)
 finops/db.py               SQLite schema and persistence
+demo/make_demo.py          made-up data for the demo dashboard
 scripts/run_audit.sh       entrypoint: preflight → collect → evaluate → report
 scripts/preflight.sh       credential checks
 scripts/audit_compute.sh   Module A collector

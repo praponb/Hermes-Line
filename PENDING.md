@@ -27,8 +27,7 @@ Last updated: 2026-10-22. Times are Bangkok time.
   URL shows made-up data (environment `Demo-Lakehouse`, 16 runs from 1 to
   22 Oct) from the container `hermes-finops-demo` on `127.0.0.1:8651`. It was
   started with `docker run`, not compose, and reads `~/hermes-demo/demo.db`,
-  which `~/hermes-demo/make_demo.py` rebuilds; that script is only on the
-  server, not in this repo. The real dashboard (`finops-web`) still runs on
+  which `demo/make_demo.py` rebuilds. The real dashboard (`finops-web`) still runs on
   `127.0.0.1:8650`, and the audit and LINE reports are unaffected. From
   26 Oct the demo page warns that the latest run is over 4 days old unless
   the data is rebuilt. Commands and how to switch back are in the README,
