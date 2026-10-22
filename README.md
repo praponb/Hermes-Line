@@ -41,7 +41,7 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
 | FinOps dashboard | <https://finops.praponb.com> | Cloudflare Access login |
 | Hermes dashboard | <http://localhost:9119> | Through an SSH tunnel |
 | Code on GitHub | <https://github.com/praponb/Hermes-Line> | Private |
-| Databricks | <https://8259562386951628.8.gcp.databricks.com> | Workspace |
+| Databricks | <https://8259554454724321.1.gcp.databricks.com> | Workspace |
 | LINE webhook | `https://hermes-line.praponb.com/line/webhook` | LINE only |
 | LINE console | <https://developers.line.biz/console/> | Webhook settings |
 
@@ -177,8 +177,8 @@ export RUN_DIR=$(mktemp -d)
 scripts/preflight.sh databricks lakehouse-audit
 scripts/preflight.sh gcloud
 scripts/audit_compute.sh databricks lakehouse-audit
-scripts/audit_compute.sh dataproc praponb-lakehouse asia-southeast1
-scripts/audit_storage.sh lakehouse-audit b8da7ee15120a028 \
+scripts/audit_compute.sh dataproc moukda-lakehouse asia-southeast1
+scripts/audit_storage.sh lakehouse-audit 1525087559b13da2 \
   "lakehouse.bronze lakehouse.silver lakehouse.gold"
 python3 -m finops run --run-dir "$RUN_DIR" --db /tmp/finops/debug.db
 # Notes recorded by the collectors
@@ -264,12 +264,16 @@ Secrets go in `deploy/secrets/` and `deploy/.env`, both git-ignored:
 
 Credentials used by the server (all read-only):
 
-- Databricks service principal `hermes-finops-auditor`: CAN_USE on warehouse
-  `b8da7ee15120a028`; USE CATALOG `lakehouse`; USE SCHEMA and SELECT on
-  `lakehouse.bronze/silver/gold`.
+- Databricks service principal `hermes-finops-auditor` (application ID
+  `e7764646-bd66-46bc-85b7-e9bb383360de`) in workspace
+  `8259554454724321.1.gcp.databricks.com`: CAN_USE on warehouse
+  `1525087559b13da2`; USE CATALOG `lakehouse`; USE SCHEMA and SELECT on
+  `lakehouse.bronze/silver/gold`. Its OAuth secret expires on 2028-10-21.
 - GCP service account
-  `hermes-finops-auditor@praponb-lakehouse.iam.gserviceaccount.com` with
+  `hermes-finops-auditor@moukda-lakehouse.iam.gserviceaccount.com` with
   `roles/dataproc.viewer`.
+- Both were created by moukda77770919@gmail.com, which owns the workspace
+  and the project.
 - The LINE channel token comes from the Hermes `.env` in
   `/home/prapon/.hermes`.
 
@@ -303,7 +307,7 @@ docker compose up -d
 docker compose exec -u 1000:1000 gateway gcloud auth \
   activate-service-account --key-file=/run/hermes-line-secrets/gcp-sa.json
 docker compose exec -u 1000:1000 gateway \
-  gcloud config set project praponb-lakehouse
+  gcloud config set project moukda-lakehouse
 # Regenerate the cron wrapper with container paths
 docker compose exec -u 1000:1000 gateway \
   /opt/hermes-line/scripts/install_hermes.sh
