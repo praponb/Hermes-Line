@@ -18,6 +18,7 @@ from finops import db, trends
 from finops.config import Config
 
 DAYS = 30
+STALE_DAYS = 4  # a normal weekend gap is 3 days
 # Set by Cloudflare Access on every request it lets through.
 EMAIL_HEADER = "Cf-Access-Authenticated-User-Email"
 
@@ -129,10 +130,11 @@ def _waste_chart(cfg: Config, runs: list[Run]) -> str:
         return top_pad + plot_h * (1 - v / scale)
 
     parts = []
+    tick_fmt = ",.0f" if peak >= 10 else ",.2f"
     for v in (0, peak / 2, peak):
         parts.append(
             f'<line class="grid" x1="{left}" x2="{w - right}" y1="{y(v):.1f}" y2="{y(v):.1f}"/>'
-            f'<text class="tick" x="{left - 6}" y="{y(v) + 4:.1f}" text-anchor="end">${v:,.0f}</text>'
+            f'<text class="tick" x="{left - 6}" y="{y(v) + 4:.1f}" text-anchor="end">${v:{tick_fmt}}</text>'
         )
     step = plot_w / len(runs)
     bar_w = max(min(step * 0.7, 28), 2)
@@ -188,15 +190,25 @@ def _table(headers: list[str], rows: list[list[str]], numeric: set[int], empty: 
 
 def render(cfg: Config, d: Dashboard, user: str | None, now_utc: datetime) -> str:
     env = html.escape(cfg.environment_name)
-    who = f" · signed in as {html.escape(user)}" if user else ""
+    # email_off stops Cloudflare's email obfuscation from rewriting the address.
+    who = f" · signed in as <!--email_off-->{html.escape(user)}<!--/email_off-->" if user else ""
     if not d.runs:
         main = f'<p class="empty">No audit runs in the last {DAYS} days yet.</p>'
     else:
         latest, t = d.runs[-1], d.trend
         if t.pct_change is not None:
             vs = f"{t.pct_change:+.0f}% vs {t.baseline_runs}-run avg {_usd(t.baseline_usd)}"
+        elif t.baseline_runs:
+            vs = f"7-day avg {_usd(t.baseline_usd)}"
         else:
             vs = "no 7-day baseline yet"
+        age_days = (now_utc - latest.ts_utc).total_seconds() / 86400
+        stale = ""
+        if age_days > STALE_DAYS:
+            stale = (
+                f'<p class="warn">No successful audit for {age_days:.0f} days. Check the job with'
+                f" <code>hermes cron runs 27f143f1b1ae</code>.</p>"
+            )
         tiles = "".join(
             [
                 _tile("Est. daily waste", _usd(latest.waste_usd), vs, t.runaway or t.over_budget),
@@ -245,6 +257,7 @@ def render(cfg: Config, d: Dashboard, user: str | None, now_utc: datetime) -> st
         )
         main = f"""
 <p class="meta">Latest run {html.escape(_local(cfg, latest.ts_utc))} Bangkok time · {html.escape(latest.run_id)}</p>
+{stale}
 <section class="tiles">{tiles}</section>
 <section class="card"><h2>Estimated daily waste per run</h2>{_waste_chart(cfg, d.runs)}</section>
 <section class="card"><h2>Compute findings · latest run</h2>{compute}</section>
@@ -310,6 +323,8 @@ th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line
 th { color: var(--muted); font-weight: 500; }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
 .empty { margin: 0; }
+.warn { background: var(--alert-bg); border: 1px solid var(--alert); color: var(--alert); border-radius: 10px;
+  padding: 10px 14px; margin: 0 0 12px; font-size: 14px; }
 """
 
 HEADERS = {
