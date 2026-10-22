@@ -38,12 +38,17 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
 
 | What | URL | Notes |
 | --- | --- | --- |
+| FinOps dashboard | <https://finops.praponb.com> | Cloudflare Access login |
 | Hermes dashboard | <http://localhost:9119> | Through an SSH tunnel |
 | Code on GitHub | <https://github.com/praponb/Hermes-Line> | Private |
 | Databricks | <https://8259562386951628.8.gcp.databricks.com> | Workspace |
 | LINE webhook | `https://hermes-line.praponb.com/line/webhook` | LINE only |
 | LINE console | <https://developers.line.biz/console/> | Webhook settings |
 
+- **FinOps dashboard:** charts and tables from the audit history (last 30
+  days, Bangkok time). Cloudflare Access app `finops` (policy "Owner only")
+  lets only prapon@gmail.com in, with a one-time code or another login
+  method set up in Zero Trust.
 - **Hermes dashboard:** it listens on the server only (`127.0.0.1:9119`)
   because it stores API keys. Open the tunnel first and keep it open:
   `ssh -L 9119:localhost:9119 prapon@192.168.1.49`.
@@ -51,9 +56,9 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
 - **LINE webhook:** only LINE's servers call it. It's unused while the
   channel's webhook stays with the OpenClaw demo; a browser gets
   `405 Method Not Allowed`.
-- **Reports:** there is no web page for them. They arrive in the LINE chat,
-  and past reports are saved on the server in
-  `~/.hermes/cron/output/27f143f1b1ae/`.
+- **Reports:** they arrive in the LINE chat, and past reports are saved on
+  the server in `~/.hermes/cron/output/27f143f1b1ae/`. The FinOps dashboard
+  shows the same findings without the remediation SQL.
 
 ## What it checks
 
@@ -157,6 +162,8 @@ python3 -m finops get db_path
 # Evaluate collected JSON, save it and print the report
 python3 -m finops run --run-dir DIR \
   [--db PATH] [--run-id ID] [--started-at EPOCH]
+# Read-only dashboard over the history DB (default 127.0.0.1:8650)
+python3 -m finops web [--host HOST] [--port PORT] [--db PATH]
 # Use a different config file
 python3 -m finops --config other.toml targets
 ```
@@ -239,13 +246,19 @@ Hermes and the auditor run together in one container on `192.168.1.49`
 - `gateway`: Hermes (cron + LINE) with the auditor at `/opt/hermes-line`
 - `dashboard`: Hermes dashboard on `127.0.0.1:9119` only
 - `tunnel`: tunnel `hermes-line`, `hermes-line.praponb.com` → `localhost:8646`
+- `finops-web`: FinOps dashboard on `127.0.0.1:8650`, with only
+  `~/.hermes/audit` mounted, read-only
+- `finops-tunnel`: tunnel `hermes-finops`, `finops.praponb.com` →
+  `localhost:8650` (`deploy/finops-tunnel.yml`). Cloudflare Access app
+  `finops` allows only prapon@gmail.com, and cloudflared rejects requests
+  without a valid Access token for that app.
 
 Hermes data lives in `/home/prapon/.hermes` (mounted at `/opt/data`).
 Secrets go in `deploy/secrets/` and `deploy/.env`, both git-ignored:
 
 | File | Contents |
 | --- | --- |
-| `deploy/.env` | copy of `.env.example` with the tunnel token |
+| `deploy/.env` | copy of `.env.example` with both tunnel tokens |
 | `deploy/secrets/databrickscfg` | `[lakehouse-audit]` service principal |
 | `deploy/secrets/gcp-sa.json` | key of `hermes-finops-auditor@…` |
 
@@ -277,7 +290,7 @@ docker build -t hermes-agent:f7b26ef ~/src/hermes-agent
 git clone -b b_pbv_main git@github-hermes-line:praponb/Hermes-Line.git \
   ~/Hermes-Line
 cd ~/Hermes-Line/deploy
-cp .env.example .env            # then add CLOUDFLARE_TUNNEL_TOKEN
+cp .env.example .env            # then add both tunnel tokens
 chmod 600 .env secrets/*
 docker compose build
 
@@ -367,11 +380,12 @@ from the cutover.
 
 ```text
 config/auditor.toml        settings, thresholds, cost rates
-finops/__main__.py         CLI (targets | get | run)
+finops/__main__.py         CLI (targets | get | run | web)
 finops/config.py           TOML loader
 finops/rules.py            compute and storage rules
 finops/trends.py           rolling-baseline waste comparison
 finops/report.py           LINE-sized report rendering
+finops/web.py              read-only web dashboard (finops.praponb.com)
 finops/db.py               SQLite schema and persistence
 scripts/run_audit.sh       entrypoint: preflight → collect → evaluate → report
 scripts/preflight.sh       credential checks
