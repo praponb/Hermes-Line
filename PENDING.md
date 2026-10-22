@@ -4,7 +4,15 @@ Last updated: 2026-10-22. Times are Bangkok time.
 
 ## Scheduled checks
 
-- **2. Mac clean-up**, once the audit has run cleanly on the new lakehouse:
+- **8. First scheduled run on the new lakehouse**, Fri 2026-10-23 08:00:
+  check `hermes cron runs 27f143f1b1ae --limit 1` or the LINE report.
+  finops.praponb.com shows demo data for now (item 7), so the run won't
+  appear there.
+
+## Ready to do
+
+- **2. Mac clean-up.** The audit ran cleanly on the new lakehouse on
+  2026-10-22, so this can go ahead:
   - Delete `~/hermes-backup-migrate-20261013.zip`. It contains secrets,
     including the live LINE token.
   - Optionally remove the Mac's `~/.hermes` and its Hermes sandbox images
@@ -15,15 +23,16 @@ Last updated: 2026-10-22. Times are Bangkok time.
 
 ## Temporary
 
-- **7. Demo dashboard on finops.praponb.com.** Since 2026-10-22 the URL shows
-  made-up data (environment `Demo-Lakehouse`, 16 runs from 1 to 22 Oct) from
-  the container `hermes-finops-demo` on `127.0.0.1:8651`. It was started with
-  `docker run`, not compose, and reads `~/hermes-demo/demo.db`, which
-  `~/hermes-demo/make_demo.py` rebuilds. The real dashboard (`finops-web`)
-  still runs on `127.0.0.1:8650`, and the audit and LINE reports are
-  unaffected. To switch back: set the service in `deploy/finops-tunnel.yml`
-  to `http://127.0.0.1:8650`, deploy, `docker compose restart finops-tunnel`,
-  then `docker rm -f hermes-finops-demo && rm -rf ~/hermes-demo`.
+- **7. Demo dashboard on finops.praponb.com.** Since 2026-10-22 (PR #10) the
+  URL shows made-up data (environment `Demo-Lakehouse`, 16 runs from 1 to
+  22 Oct) from the container `hermes-finops-demo` on `127.0.0.1:8651`. It was
+  started with `docker run`, not compose, and reads `~/hermes-demo/demo.db`,
+  which `~/hermes-demo/make_demo.py` rebuilds; that script is only on the
+  server, not in this repo. The real dashboard (`finops-web`) still runs on
+  `127.0.0.1:8650`, and the audit and LINE reports are unaffected. From
+  26 Oct the demo page warns that the latest run is over 4 days old unless
+  the data is rebuilt. Commands and how to switch back are in the README,
+  [Demo dashboard](README.md#demo-dashboard).
 
 ## Optional
 
@@ -52,7 +61,11 @@ Last updated: 2026-10-22. Times are Bangkok time.
   moukda77770919@gmail.com: service principal `hermes-finops-auditor`
   (OAuth secret expires 2028-10-21) and service account
   `hermes-finops-auditor@moukda-lakehouse`.
-
+- Test runs on the new lakehouse, both all clear: 09:45 through
+  `hermes cron run` (report delivered to LINE) and 09:55 through the cron
+  wrapper without LINE. Both are in the history DB.
+- Demo dashboard built from made-up collector data and published at
+  finops.praponb.com (PR #10, item 7).
 - First server backup and reports checked: backups run daily at 03:00
   (7 kept); reports ran on 14–16 Oct.
 - FinOps dashboard at https://finops.praponb.com (PR #5), behind
