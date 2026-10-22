@@ -27,8 +27,8 @@ See [Deploy with Docker](#deploy-with-docker-ubuntu-server).
 - Schedule: weekdays 08:00 Bangkok time, job `27f143f1b1ae`, report pushed
   to LINE.
 - LINE chat: the channel's webhook stays with the OpenClaw demo (both bots
-  share one channel), so Hermes only pushes reports. The `hermes-line`
-  tunnel is ready if Hermes gets its own channel.
+  share one channel), so Hermes only pushes reports. Its webhook isn't
+  published; the `hermes-line` tunnel was removed on 2026-10-22.
 - The MacBook is retired: its Hermes gateway is uninstalled and the job is
   paused there. Use it only for development (tests, dry runs).
 
@@ -42,7 +42,6 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
 | Hermes dashboard | <http://localhost:9119> | Through an SSH tunnel |
 | Code on GitHub | <https://github.com/praponb/Hermes-Line> | Private |
 | Databricks | <https://8259554454724321.1.gcp.databricks.com> | Workspace |
-| LINE webhook | `https://hermes-line.praponb.com/line/webhook` | LINE only |
 | LINE console | <https://developers.line.biz/console/> | Webhook settings |
 
 - **FinOps dashboard:** charts and tables from the audit history (last 30
@@ -53,9 +52,6 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
   because it stores API keys. Open the tunnel first and keep it open:
   `ssh -L 9119:localhost:9119 prapon@192.168.1.49`.
 - **Code:** production runs from `main`; work happens on `b_pbv_main`.
-- **LINE webhook:** only LINE's servers call it. It's unused while the
-  channel's webhook stays with the OpenClaw demo; a browser gets
-  `405 Method Not Allowed`.
 - **Reports:** they arrive in the LINE chat, and past reports are saved on
   the server in `~/.hermes/cron/output/27f143f1b1ae/`. The FinOps dashboard
   shows the same findings without the remediation SQL.
@@ -245,7 +241,6 @@ Hermes and the auditor run together in one container on `192.168.1.49`
 
 - `gateway`: Hermes (cron + LINE) with the auditor at `/opt/hermes-line`
 - `dashboard`: Hermes dashboard on `127.0.0.1:9119` only
-- `tunnel`: tunnel `hermes-line`, `hermes-line.praponb.com` → `localhost:8646`
 - `finops-web`: FinOps dashboard on `127.0.0.1:8650`, with only
   `~/.hermes/audit` mounted, read-only
 - `finops-tunnel`: tunnel `hermes-finops`, `finops.praponb.com` →
@@ -258,7 +253,7 @@ Secrets go in `deploy/secrets/` and `deploy/.env`, both git-ignored:
 
 | File | Contents |
 | --- | --- |
-| `deploy/.env` | copy of `.env.example` with both tunnel tokens |
+| `deploy/.env` | copy of `.env.example` with the `hermes-finops` tunnel token |
 | `deploy/secrets/databrickscfg` | `[lakehouse-audit]` service principal |
 | `deploy/secrets/gcp-sa.json` | key of `hermes-finops-auditor@…` |
 
@@ -279,8 +274,9 @@ Credentials used by the server (all read-only):
 
 Hermes runs the agent's commands inside the container
 (`terminal.backend: local`), so no Docker socket is mounted. The LINE webhook
-listens on `127.0.0.1:8646` only (`LINE_HOST=127.0.0.1` in the Hermes `.env`);
-just the tunnel reaches it. Each container's log is capped at 3 × 10 MB.
+listens on `127.0.0.1:8646` only (`LINE_HOST=127.0.0.1` in the Hermes `.env`)
+and isn't published, so Hermes can push to LINE but not receive chats.
+`LINE_PUBLIC_URL` is unset, so Hermes can't send images, audio or video. Each container's log is capped at 3 × 10 MB.
 
 ### First install
 
@@ -294,7 +290,7 @@ docker build -t hermes-agent:f7b26ef ~/src/hermes-agent
 git clone -b b_pbv_main git@github-hermes-line:praponb/Hermes-Line.git \
   ~/Hermes-Line
 cd ~/Hermes-Line/deploy
-cp .env.example .env            # then add both tunnel tokens
+cp .env.example .env            # then add FINOPS_TUNNEL_TOKEN
 chmod 600 .env secrets/*
 docker compose build
 

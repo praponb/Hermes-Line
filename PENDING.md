@@ -18,19 +18,19 @@ Last updated: 2026-10-22. Times are Bangkok time.
 - **3. Off-server backups.** Daily backups stay on the server in
   `~/hermes-backups`. A copy elsewhere (NAS, cloud storage) needs a
   destination.
-- **4. Unused tunnel.** Keep `hermes-line.praponb.com` for a future Hermes
-  LINE channel, or remove the `hermes-line` tunnel and its DNS record.
-  (`finops.praponb.com` uses its own tunnel, `hermes-finops`.)
 - **5. gcloud on the Mac.** It can't sign in; production isn't affected. Fix
   with `gcloud auth login prapon@gmail.com --force` when needed.
 
 ## Possible later
 
 - **6. Chat with Hermes on LINE.** Needs its own LINE channel; today the
-  shared channel's webhook goes to the OpenClaw demo.
+  shared channel's webhook goes to the OpenClaw demo. It would also need a
+  public HTTPS URL for the webhook again (a tunnel) and `LINE_PUBLIC_URL`.
 
 ## Done on 2026-10-22
 
+- Removed the unused `hermes-line` tunnel, its `hermes-line.praponb.com` DNS
+  record and its token; `LINE_PUBLIC_URL` commented out in the Hermes `.env`.
 - Audit failures since 2026-10-19 explained: GCP project
   `praponb-lakehouse` and its Databricks workspace were deleted (the project
   is purged by Google about 30 days later). The auditor now targets
