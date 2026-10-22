@@ -38,7 +38,7 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
 
 | What | URL | Notes |
 | --- | --- | --- |
-| FinOps dashboard | <https://finops.praponb.com> | Cloudflare Access login |
+| FinOps dashboard | <https://finops.praponb.com> | Cloudflare Access login; demo data for now |
 | Hermes dashboard | <http://localhost:9119> | Through an SSH tunnel |
 | Code on GitHub | <https://github.com/praponb/Hermes-Line> | Private |
 | Databricks | <https://8259554454724321.1.gcp.databricks.com> | Workspace |
@@ -49,7 +49,10 @@ Open follow-ups are tracked in [PENDING.md](PENDING.md).
   lets only prapon@gmail.com in, with a one-time code or another login
   method set up in Zero Trust. **Since 2026-10-22 it temporarily shows the
   demo dashboard** (made-up data, environment `Demo-Lakehouse`); see
-  [PENDING.md](PENDING.md) item 7.
+  [Demo dashboard](#demo-dashboard). Real runs are still in the LINE reports
+  and on the real dashboard through an SSH tunnel:
+  `ssh -L 8650:localhost:8650 prapon@192.168.1.49`, then
+  <http://localhost:8650>.
 - **Hermes dashboard:** it listens on the server only (`127.0.0.1:9119`)
   because it stores API keys. Open the tunnel first and keep it open:
   `ssh -L 9119:localhost:9119 prapon@192.168.1.49`.
@@ -247,7 +250,7 @@ Hermes and the auditor run together in one container on `192.168.1.49`
   `~/.hermes/audit` mounted, read-only
 - `finops-tunnel`: tunnel `hermes-finops`, `finops.praponb.com` →
   `localhost:8650` (`deploy/finops-tunnel.yml`; temporarily `localhost:8651`,
-  the demo dashboard, see [PENDING.md](PENDING.md) item 7). Cloudflare Access app
+  the [demo dashboard](#demo-dashboard)). Cloudflare Access app
   `finops` allows only prapon@gmail.com, and cloudflared rejects requests
   without a valid Access token for that app.
 
@@ -321,7 +324,48 @@ docker compose logs -f gateway
 docker compose exec -u 1000:1000 gateway hermes cron list
 docker compose exec -u 1000:1000 gateway \
   /opt/hermes-line/scripts/run_audit.sh --dry-run
+# Real run saved to the history DB, as the scheduler runs it, without LINE
+docker compose exec -T -u hermes -e HOME=/opt/data gateway \
+  /opt/data/scripts/lakehouse_finops.sh
 ```
+
+### Demo dashboard
+
+Since 2026-10-22, `finops.praponb.com` shows a demo dashboard with made-up
+data (environment `Demo-Lakehouse`, weekday 08:00 runs from 1 Oct). It is
+separate from production:
+
+- `demo/make_demo.py OUT` writes the JSON files the collectors would produce
+  for each run (`OUT/runs/`) and feeds them through the real rules, trend and
+  DB code into `OUT/demo.db`. It also writes `OUT/demo.toml`:
+  `config/auditor.toml` with the demo environment name. On the server, OUT is
+  `~/hermes-demo`; locally it defaults to `demo/out` (git-ignored).
+- Container `hermes-finops-demo` (started with `docker run`, not compose)
+  serves it read-only on `127.0.0.1:8651`.
+- The audit, its history DB, the LINE reports and `finops-web` on 8650 are
+  unchanged.
+
+```bash
+# Rebuild the demo data up to today (the page warns once the latest run is
+# more than 4 days old, from 26 Oct with the current data). Uses the
+# script in the image, so run docker compose build after pulling changes.
+docker run --rm --user 1000:1000 -e TZ=Asia/Bangkok -w /opt/hermes-line \
+  -v ~/hermes-demo:/demo --entrypoint python3 hermes-line:latest \
+  demo/make_demo.py /demo
+# Locally (development)
+uv run python demo/make_demo.py
+# (Re)start the demo dashboard
+docker run -d --name hermes-finops-demo --restart unless-stopped \
+  --network host --user 1000:1000 -e TZ=Asia/Bangkok -w /opt/hermes-line \
+  -v ~/hermes-demo:/demo:ro --log-opt max-size=10m --log-opt max-file=3 \
+  --entrypoint python3 hermes-line:latest -m finops --config /demo/demo.toml \
+  web --host 127.0.0.1 --port 8651 --db /demo/demo.db
+```
+
+To switch `finops.praponb.com` back to the real dashboard, set the service in
+`deploy/finops-tunnel.yml` to `http://127.0.0.1:8650`, merge and deploy, run
+`docker compose restart finops-tunnel`, then remove the demo with
+`docker rm -f hermes-finops-demo && rm -rf ~/hermes-demo`.
 
 ### Backups
 
@@ -388,8 +432,9 @@ finops/config.py           TOML loader
 finops/rules.py            compute and storage rules
 finops/trends.py           rolling-baseline waste comparison
 finops/report.py           LINE-sized report rendering
-finops/web.py              read-only web dashboard (finops.praponb.com)
+finops/web.py              read-only web dashboard (finops-web, demo dashboard)
 finops/db.py               SQLite schema and persistence
+demo/make_demo.py          made-up data for the demo dashboard
 scripts/run_audit.sh       entrypoint: preflight → collect → evaluate → report
 scripts/preflight.sh       credential checks
 scripts/audit_compute.sh   Module A collector
