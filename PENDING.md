@@ -18,9 +18,6 @@ Last updated: 2026-10-22. Times are Bangkok time.
 - **3. Off-server backups.** Daily backups stay on the server in
   `~/hermes-backups`. A copy elsewhere (NAS, cloud storage) needs a
   destination.
-- **5. gcloud on the Mac.** It can't sign in; production isn't affected. Fix
-  with `gcloud auth login prapon@gmail.com --force` when needed.
-
 ## Possible later
 
 - **6. Chat with Hermes on LINE.** Needs its own LINE channel; today the
@@ -29,6 +26,9 @@ Last updated: 2026-10-22. Times are Bangkok time.
 
 ## Done on 2026-10-22
 
+- gcloud on the Mac uses moukda77770919@gmail.com (CLI login, Application
+  Default Credentials and the VS Code extension all verified); the
+  prapon@gmail.com login is no longer needed.
 - Removed the unused `hermes-line` tunnel, its `hermes-line.praponb.com` DNS
   record and its token; `LINE_PUBLIC_URL` commented out in the Hermes `.env`.
 - Audit failures since 2026-10-19 explained: GCP project
