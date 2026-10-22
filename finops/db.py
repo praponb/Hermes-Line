@@ -57,6 +57,11 @@ def connect(path: Path | str) -> sqlite3.Connection:
     return conn
 
 
+def connect_readonly(path: Path | str) -> sqlite3.Connection:
+    """Open an existing DB without creating or migrating it (the web dashboard mounts it read-only)."""
+    return sqlite3.connect(f"{Path(path).resolve().as_uri()}?mode=ro", uri=True)
+
+
 def unique_run_id(conn: sqlite3.Connection, run_id: str) -> str:
     """Suffix the run id when a run already exists for the same minute (e.g. a manual rerun)."""
     candidate, n = run_id, 1

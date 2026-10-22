@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from finops import config as config_mod
-from finops import db, report, rules, trends
+from finops import db, report, rules, trends, web
 
 
 @dataclass
@@ -128,6 +128,12 @@ def cmd_run(args) -> int:
     return 0
 
 
+def cmd_web(args) -> int:
+    cfg = config_mod.load(args.config)
+    web.serve(cfg, Path(args.db).expanduser() if args.db else cfg.db_path, args.host, args.port)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="finops")
     parser.add_argument("--config", default=str(config_mod.DEFAULT_CONFIG))
@@ -142,6 +148,11 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--run-id")
     run.add_argument("--started-at", type=float, help="epoch seconds when the run started")
     run.set_defaults(func=cmd_run)
+    web_p = sub.add_parser("web", help="serve the read-only history dashboard")
+    web_p.add_argument("--host", default="127.0.0.1")
+    web_p.add_argument("--port", type=int, default=8650)
+    web_p.add_argument("--db", help="override db_path from config")
+    web_p.set_defaults(func=cmd_web)
     args = parser.parse_args(argv)
     return args.func(args)
 

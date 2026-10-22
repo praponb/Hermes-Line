@@ -1,0 +1,14 @@
+# Ingress for tunnel "hermes-finops" (finops.praponb.com → the FinOps web dashboard).
+# The tunnel token comes from FINOPS_TUNNEL_TOKEN in deploy/.env.
+# Cloudflare Access app "finops" (policy "Owner only": prapon@gmail.com) guards the hostname, and
+# cloudflared also drops any request that lacks a valid Access token for that app.
+ingress:
+  - hostname: finops.praponb.com
+    service: http://127.0.0.1:8650
+    originRequest:
+      access:
+        required: true
+        teamName: praponb
+        audTag:
+          - 25a349267b59a0d45b9c8b06430b83c594e19274b791713396c3b7b853307e62
+  - service: http_status:404

@@ -67,3 +67,37 @@ services:
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in deploy/.env}
       - TUNNEL_URL=http://127.0.0.1:8646  # IPv4 explicitly: the webhook binds 127.0.0.1 only
+
+  finops-web:
+    image: hermes-line:latest
+    container_name: hermes-finops-web
+    restart: unless-stopped
+    network_mode: host
+    logging: *logging
+    depends_on:
+      - gateway
+    user: "${HERMES_UID:-1000}:${HERMES_GID:-1000}"
+    working_dir: /opt/hermes-line
+    # Only the audit DB, read-only; the Hermes .env and logins stay out of this container.
+    volumes:
+      - ${HERMES_DATA:-/home/prapon/.hermes}/audit:/data/audit:ro
+    environment:
+      - TZ=Asia/Bangkok
+      - FINOPS_DB_PATH=/data/audit/lakehouse_finops.db
+    # Localhost-only; published as finops.praponb.com by finops-tunnel.
+    entrypoint: ["python3", "-m", "finops", "web", "--host", "127.0.0.1", "--port", "8650"]
+
+  finops-tunnel:
+    image: cloudflare/cloudflared:2026.10.0
+    container_name: hermes-finops-tunnel
+    restart: unless-stopped
+    network_mode: host
+    logging: *logging
+    depends_on:
+      - finops-web
+    # Tunnel "hermes-finops"; ingress and the Cloudflare Access check are in finops-tunnel.yml.
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/finops-tunnel.yml", "run"]
+    volumes:
+      - ./finops-tunnel.yml:/etc/cloudflared/finops-tunnel.yml:ro
+    environment:
+      - TUNNEL_TOKEN=${FINOPS_TUNNEL_TOKEN:?set FINOPS_TUNNEL_TOKEN in deploy/.env}
