@@ -20,7 +20,7 @@ services:
     image: hermes-line:latest
     container_name: hermes
     restart: unless-stopped
-    network_mode: host  # LINE webhook on 127.0.0.1:8646 (LINE_HOST), reached through the tunnel
+    network_mode: host  # LINE webhook on 127.0.0.1:8646 (LINE_HOST), not published; Hermes only pushes
     logging: *logging
     volumes:
       - ${HERMES_DATA:-/home/prapon/.hermes}:/opt/data
@@ -54,19 +54,6 @@ services:
       - TZ=Asia/Bangkok
     # Localhost-only. From the Mac: ssh -L 9119:localhost:9119 prapon@192.168.1.49
     command: ["dashboard", "--host", "127.0.0.1", "--no-open"]
-
-  tunnel:
-    image: cloudflare/cloudflared:2026.10.0
-    container_name: hermes-tunnel
-    restart: unless-stopped
-    network_mode: host
-    logging: *logging
-    # Tunnel "hermes-line" (CNAME hermes-line.praponb.com); every request goes to the
-    # LINE webhook port.
-    command: ["tunnel", "--no-autoupdate", "run"]
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in deploy/.env}
-      - TUNNEL_URL=http://127.0.0.1:8646  # IPv4 explicitly: the webhook binds 127.0.0.1 only
 
   finops-web:
     image: hermes-line:latest
